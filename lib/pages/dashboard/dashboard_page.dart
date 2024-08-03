@@ -1,10 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 import 'package:xwatch/controllers/fitness_controller.dart';
-import 'package:xwatch/pages/auth/login_page.dart';
 import 'package:intl/intl.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -34,6 +35,7 @@ class _DashboardPageState extends State<DashboardPage> {
     // checkPermission();
     super.initState();
     // checkPermission();
+    refreshData();
   }
 
   void refreshData() async {
@@ -56,34 +58,17 @@ class _DashboardPageState extends State<DashboardPage> {
       });
     }    
   }
+
+  void setPreference(data) async {
+    final prefs = await SharedPreferences.getInstance();
+    String encodeDevice = jsonEncode(data);
+    await prefs.setString('device_info', encodeDevice);
+  }
   
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text("Dashboard", style: GoogleFonts.rubik(
-          fontSize: 16.sp,
-          fontWeight: FontWeight.w400,
-        ),),
-        centerTitle: true,
-        // leading: Icon(Icons.menu),
-        actions: [
-          IconButton(onPressed: () async {
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.remove('auth');
-            Navigator.pushAndRemoveUntil(
-              // ignore: use_build_context_synchronously
-              context,
-              MaterialPageRoute(
-                builder: (context) => const LoginPage(),
-              ),
-              (route) => false);
-          }, icon: const Icon(Icons.logout_outlined)),
-          // IconButton(onPressed: () => {}, icon: Icon(Icons.more_vert)),
-        ],
-      ),
-      backgroundColor: Colors.grey[200],
+      backgroundColor: Colors.blueGrey.shade50,
       body: RefreshIndicator(
         triggerMode: RefreshIndicatorTriggerMode.onEdge,
         onRefresh: () async {
@@ -100,54 +85,32 @@ class _DashboardPageState extends State<DashboardPage> {
             }
 
             final data = snapshot.data;
+            // debugPrint("data background $data");
             if (data!["error"] == false) {
-              debugPrint("========>> data: ${data}");
               errorResult = data["error_message"];
               resultDeviceInfo = data["resultDeviceInfo"];
               resultSleep = data["resultSleep"];
               resultHeart = data["resultHeart"];
               resultStep =  data["resultStep"];
               messageFinish = "Data diperbaharui $logUpdated";
+
+              setPreference(resultDeviceInfo);
+              
               return ListView(
                 padding: EdgeInsets.symmetric(horizontal: 24.sp),
                 children: [
+                  SizedBox(height: 12.sp,),
                   Text(messageFinish, style: GoogleFonts.arimo(
                     fontSize: 11.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.blue[900]
                   ),),
-                  SizedBox(height: 4.sp,),
-                  errorResult.isNotEmpty ? Text(errorResult, style: GoogleFonts.arimo(
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.blue[900]
-                    ),) : const Stack(),
-                  SizedBox(height: 4.sp,),
-                  Text("Perangkat: ${resultDeviceInfo!['device_name']}", style: GoogleFonts.arimo(
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.blue[900]
-                  ),),
-                  SizedBox(height: 4.sp,),
-                  Text("No seri: ${resultDeviceInfo!['sn']}", style: GoogleFonts.arimo(
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.blue[900]
-                  ),),
-                  SizedBox(height: 4.sp,),
-                  Text("Model: ${resultDeviceInfo!['model']}", style: GoogleFonts.arimo(
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.blue[900]
-                  ),),
-                  SizedBox(height: 8.sp,),
-
+                  SizedBox(height: 12.sp,),
                   Row(
                     children: [
                       Expanded(
                         flex: 1,
                         child: Card(
-                          margin: EdgeInsets.only(right: 6.sp),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                             // side: const BorderSide(color: Colors.blue, width: 2,),
@@ -177,12 +140,12 @@ class _DashboardPageState extends State<DashboardPage> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       mainAxisAlignment: MainAxisAlignment.start,
                                       children: [
-                                        Text("Lelap:      \n ${resultSleep!.isNotEmpty ? "${int.tryParse(resultSleep!["totalDeepSleepTime"].toString().substring(0,2)).toString()} jam, ${int.tryParse(resultSleep!["totalDeepSleepTime"].toString().substring(3, 5)).toString()} menit" : "0 Jam"}", style: GoogleFonts.arimo(
+                                        Text("Lelap:      \n ${resultSleep != null ? "${int.tryParse(resultSleep!["totalDeepSleepTime"].toString().substring(0,2)).toString()} jam, ${int.tryParse(resultSleep!["totalDeepSleepTime"].toString().substring(3, 5)).toString()} menit" : "0 Jam"}", style: GoogleFonts.arimo(
                                           fontSize: 12.sp,
                                           fontWeight: FontWeight.w600,
                                           color: Colors.blue[900]
                                         ),),
-                                        Text("Ringan:     \n ${resultSleep!.isNotEmpty ? "${int.tryParse(resultSleep!["totalLightDurationTime"].toString().substring(0,2)).toString()} jam, ${int.tryParse(resultSleep!["totalLightDurationTime"].toString().substring(3, 5)).toString()} menit" : "0 Jam"}", style: GoogleFonts.arimo(
+                                        Text("Ringan:     \n ${resultSleep != null ? "${int.tryParse(resultSleep!["totalLightDurationTime"].toString().substring(0,2)).toString()} jam, ${int.tryParse(resultSleep!["totalLightDurationTime"].toString().substring(3, 5)).toString()} menit" : "0 Jam"}", style: GoogleFonts.arimo(
                                           fontSize: 12.sp,
                                           fontWeight: FontWeight.w600,
                                           color: Colors.blue[400]
@@ -192,7 +155,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                   ],
                                 ),                          
                                 SizedBox(height: 18.sp),
-                                Text(resultSleep!.isNotEmpty ? "${int.tryParse(resultSleep!["totalDurationTime"].toString().substring(0,2)).toString()} jam, ${int.tryParse(resultSleep!["totalDurationTime"].toString().substring(3, 5)).toString()} menit" 
+                                Text(resultSleep != null ? "${int.tryParse(resultSleep!["totalDurationTime"].toString().substring(0,2)).toString()} jam, ${int.tryParse(resultSleep!["totalDurationTime"].toString().substring(3, 5)).toString()} menit" 
                                   : "0 Jam", style: TextStyle(
                                   fontSize: 12.sp, color: Colors.black87
                                 )),
@@ -213,7 +176,6 @@ class _DashboardPageState extends State<DashboardPage> {
                     children: [
                       Expanded(
                         child: Card(
-                          // margin: EdgeInsets.symmetric(horizontal: 6.sp),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                             // side: const BorderSide(color: Colors.blue, width: 2,),
@@ -221,7 +183,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           elevation: 0,
                           clipBehavior: Clip.antiAliasWithSaveLayer,
                           child: Container(
-                            padding: const EdgeInsets.all(15),
+                            padding: const EdgeInsets.all(16),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
@@ -235,7 +197,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                   ),
                                 ),                          
                                 SizedBox(height: 18.sp),
-                                Text(resultHeart!.isNotEmpty ? "${resultHeart!["hr"]} BPM" : "0 BPM", style: TextStyle(
+                                Text(resultHeart != null ? "${resultHeart!["hr"]} BPM" : "0 BPM", style: TextStyle(
                                     fontSize: 12.sp, color: Colors.black87
                                 )),
                                 Text(DateFormat("dd MMM").format(DateTime.now()), style: TextStyle(
@@ -249,7 +211,6 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                       Expanded(
                         child: Card(
-                          margin: EdgeInsets.only(left: 6.sp),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                             // side: const BorderSide(color: Colors.blue, width: 2,),
@@ -257,7 +218,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           elevation: 0,
                           clipBehavior: Clip.antiAliasWithSaveLayer,
                           child: Container(
-                            padding: const EdgeInsets.all(15),
+                            padding: const EdgeInsets.all(16),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
@@ -271,7 +232,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                   ),
                                 ),                          
                                 SizedBox(height: 18.sp),
-                                Text(resultStep!.isNotEmpty ? "${resultStep!["steps"]} langkah" : "0 langkah", style: TextStyle(
+                                Text(resultStep != null ? "${resultStep!["steps"]} langkah" : "0 langkah", style: TextStyle(
                                     fontSize: 12.sp, color: Colors.black87
                                 )),
                                 Text(DateFormat("dd MMM").format(DateTime.now()), style: TextStyle(
@@ -295,23 +256,30 @@ class _DashboardPageState extends State<DashboardPage> {
               resultStep =  null;
               messageFinish = "Error ${data['error_message']}";
               
-              return Column(
+              return ListView(
                 children: [
-                  Text("Error $messageFinish", style: GoogleFonts.rubik(
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w400,
-                    color: Colors.red
-                  ),),
-                  ElevatedButton(
-                    onPressed: () async {
-                      // checkPermission();
-                      // await _getStoragePermission();
-                      // PermissionDevice permissionDevice = PermissionDevice();
-                      // final permission = await permissionDevice.storagePermission();
-                      // debugPrint('permission : $permission');
-                      // await _getStoragePermission();
-                    }, 
-                    child: const Text('Request Storage Permission')),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 24.sp),
+                    child: Column(
+                      children: [
+                        Text("Error $messageFinish", style: GoogleFonts.rubik(
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.red
+                        ),),
+                        // ElevatedButton(
+                        //   onPressed: () async {
+                        //     // checkPermission();
+                        //     // await _getStoragePermission();
+                        //     // PermissionDevice permissionDevice = PermissionDevice();
+                        //     // final permission = await permissionDevice.storagePermission();
+                        //     // debugPrint('permission : $permission');
+                        //     // await _getStoragePermission();
+                        //   }, 
+                        //   child: const Text('Request Storage Permission')),
+                      ],
+                    ),
+                  )
                 ],
               );
             }

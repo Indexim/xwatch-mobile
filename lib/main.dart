@@ -2,18 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:loader_overlay/loader_overlay.dart';
 import 'package:sizer/sizer.dart';
 import 'package:xwatch/pages/splash_page.dart';
-import 'package:xwatch/services/background_service.dart';
 
-Future<void> main() async {
-    WidgetsFlutterBinding.ensureInitialized();
-    await BackgroundService.instance.initializeService();
+// Future<void> main() async {
+//     WidgetsFlutterBinding.ensureInitialized();
+//     await BackgroundService.instance.initializeService();
 
-    runApp(const MyApp());
-}
-
-// void main() {
-//   runApp(const MyApp());
+//     runApp(const MyApp());
 // }
+
+void main() {
+  runApp(const MyApp());
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

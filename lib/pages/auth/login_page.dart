@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 import 'package:xwatch/controllers/auth_controller.dart';
-import 'package:xwatch/pages/dashboard/dashboard_page.dart';
+import 'package:xwatch/pages/navigations/navigation_pro_page.dart';
+import 'package:xwatch/services/background_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -108,16 +109,20 @@ class _LoginPageState extends State<LoginPage> {
                         // debugPrint("===> res: ${res}");
                         if (res['status'] == 200) {
                           String encodeAuth = json.encode(res["data"]);
-                          await prefs.setString('auth', encodeAuth);
+                          await prefs.setString('auth', encodeAuth).then((value) async {
+                            WidgetsFlutterBinding.ensureInitialized();
+                            await BackgroundService.instance.initializeService();
 
-                          Navigator.pushAndRemoveUntil(
-                            // ignore: use_build_context_synchronously
-                            context,
-                            MaterialPageRoute(
-                              // builder: (context) => const DashboardPage(),
-                              builder: (context) => const DashboardPage(),
-                            ),
-                            (route) => false);
+                            Navigator.pushAndRemoveUntil(
+                              // ignore: use_build_context_synchronously
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ProvidedStylesExample(menuScreenContext: context,),
+                              ),
+                              (route) => false);
+                          });
+
+                          
                         } else {
                           // ignore: use_build_context_synchronously
                           ScaffoldMessenger.of(context).showSnackBar(

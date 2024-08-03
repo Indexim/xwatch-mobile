@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 // import 'dart:convert';
 import 'dart:ui';
 
@@ -27,46 +28,69 @@ void onStart(ServiceInstance service) async {
     debugPrint('background process is now stopped');
   });
 
-  service.on('start').listen((event) {});
+  service.on('start').listen((event) {
+    debugPrint("service on start");
+  });
+
+  service.on('stop').listen((event) {
+    debugPrint("service on stop");
+  });
+
+  if (service is AndroidServiceInstance) {
+    service.on('setAsForeground').listen((event) {
+      service.setAsForegroundService();
+    });
+
+    service.on('setAsBackground').listen((event) {
+      service.setAsBackgroundService();
+    });
+  }
 
   // Timer.periodic(const Duration(minutes: 5), (timer) async {
   //   /* sync detail */
     
   // });
 
-  Timer.periodic(const Duration(seconds: 10), (timer) async {
+  Timer.periodic(const Duration(seconds: 5), (timer) async {
     /* action plan */
     try {
-      FitnessController fitnessController = FitnessController();
-      Map<String, dynamic>? resultLog = await fitnessController.loadData();
-      // debugPrint("background service resultLog: $resultLog");
-      if (resultLog['error'] == false) {
-        service.invoke(
-          'update-log-xwatch',
-          {
-            "error": false,
-            "error_message": "",
-            "logUpdate": DateFormat("HH:mm").format(DateTime.now()),
-            "resultDeviceInfo": resultLog["resultDeviceInfo"],
-            "resultSleep": resultLog["resultSleep"],
-            "resultHeart": resultLog["resultHeart"],
-            "resultStep": resultLog["resultStep"],
-          },
-        );
-      }
-      else {
-        service.invoke(
-          'update-log-xwatch',
-          {
-            "error": true,
-            "error_message": resultLog["error_message"],
-            "logUpdate": DateFormat("HH:mm").format(DateTime.now()),
-            "resultDeviceInfo": null,
-            "resultSleep": null,
-            "resultHeart": null,
-            "resultStep": null,
-          },
-        );
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.reload();
+      final Map<String, dynamic> auth = jsonDecode(prefs.getString("auth") ?? "{}");
+      debugPrint("background auth: $auth, ${ auth.isNotEmpty}");
+      if (auth.isNotEmpty == true) {
+        debugPrint("start background... ${DateFormat("yyyy MM dd HH:mm:ss").format(DateTime.now())}");
+        FitnessController fitnessController = FitnessController();
+        Map<String, dynamic>? resultLog = await fitnessController.loadData();
+        // debugPrint("background service resultLog: $resultLog");
+        if (resultLog['error'] == false) {
+          service.invoke(
+            'update-log-xwatch',
+            {
+              "error": false,
+              "error_message": "",
+              "logUpdate": DateFormat("HH:mm").format(DateTime.now()),
+              "resultDeviceInfo": resultLog["resultDeviceInfo"],
+              "resultSleep": resultLog["resultSleep"],
+              "resultHeart": resultLog["resultHeart"],
+              "resultStep": resultLog["resultStep"],
+            },
+          );
+        }
+        else {
+          service.invoke(
+            'update-log-xwatch',
+            {
+              "error": true,
+              "error_message": resultLog["error_message"],
+              "logUpdate": DateFormat("HH:mm").format(DateTime.now()),
+              "resultDeviceInfo": null,
+              "resultSleep": null,
+              "resultHeart": null,
+              "resultStep": null,
+            },
+          );
+        }
       }
       // service.invoke(
       //   'update-log-xwatch',
@@ -90,57 +114,6 @@ void onStart(ServiceInstance service) async {
         },
       );
     }
-    debugPrint("start background... ${DateFormat("yyyy MM dd HH:mm:ss").format(DateTime.now())}");
-    // final SharedPreferences prefs = await SharedPreferences.getInstance();
-    // Map<String, dynamic>? auth = {};
-    // auth = jsonDecode(prefs.getString("auth") ?? "{}");
-    // try {
-    //   FitnessController fitnessController = FitnessController();
-    //   Map<String, dynamic>? resultLog = await fitnessController.loadData();
-    //   debugPrint("background service resultLog: $resultLog");
-    //   if (resultLog['error'] == false) {
-    //     service.invoke(
-    //       'update-log-xwatch',
-    //       {
-    //         "error": false,
-    //         "error_message": "",
-    //         "logUpdate": DateFormat("HH:mm").format(DateTime.now()),
-    //         "resultDeviceInfo": resultLog["resultDeviceInfo"],
-    //         "resultSleep": resultLog["resultSleep"],
-    //         "resultHeart": resultLog["resultHeart"],
-    //         "resultStep": resultLog["resultStep"],
-    //       },
-    //     );
-    //   }
-    //   else {
-    //     service.invoke(
-    //       'update-log-xwatch',
-    //       {
-    //         "error": true,
-    //         "error_message": resultLog["error_message"],
-    //         "logUpdate": DateFormat("HH:mm").format(DateTime.now()),
-    //         "resultDeviceInfo": null,
-    //         "resultSleep": null,
-    //         "resultHeart": null,
-    //         "resultStep": null,
-    //       },
-    //     );
-    //   }
-    // } catch (e) {
-    //   service.invoke(
-    //       'update-log-xwatch',
-    //       {
-    //         "error": true,
-    //         "error_message": "There is ${e.toString()}",
-    //         "logUpdate": DateFormat("HH:mm").format(DateTime.now()),
-    //         "resultDeviceInfo": null,
-    //         "resultSleep": null,
-    //         "resultHeart": null,
-    //         "resultStep": null,
-    //       },
-    //     );
-    // }
-    
   });
 }
 

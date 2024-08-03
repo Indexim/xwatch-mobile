@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 import 'package:xwatch/pages/auth/login_page.dart';
-import 'package:xwatch/pages/dashboard/dashboard_page.dart';
+import 'package:xwatch/pages/navigations/navigation_pro_page.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key, required this.title});
@@ -42,7 +42,9 @@ class _SplashPageState extends State<SplashPage> {
         // ignore: use_build_context_synchronously
         context,
         MaterialPageRoute(
-          builder: (context) => const DashboardPage(),
+          // builder: (context) => const DashboardPage(),
+          builder: (context) => ProvidedStylesExample(menuScreenContext: context,),
+          
         ),
         (route) => false);
     } else {

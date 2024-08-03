@@ -34,11 +34,11 @@ class FitnessController {
     }
     
     Map<String, dynamic>? auth = {};
-    auth = jsonDecode(prefs.getString("auth") ?? "{}");
+    auth = await jsonDecode(prefs.getString("auth") ?? "{}");
     // debugPrint("============== auth: $auth");
     
     Map<String, dynamic> resultLog =  await getLog();
-    // debugPrint("resultLog: $resultLog");
+    // debugPrint("===>>> resultLog: $resultLog");
     if (resultLog['error'] == false) {
       resultHeart = resultLog["resultHeart"];
       resultStep = resultLog["resultStep"];
@@ -47,12 +47,14 @@ class FitnessController {
       
       Map<String, dynamic> data = {};
       data['logUpdated'] = DateFormat("yyyy-MM-dd").format(DateTime.now());
-      data['username'] = "zanurano";
-      data['step'] = resultStep!["steps"] ?? 0;
-      data['bpm'] = resultHeart!["hr"] ?? 0;
-      data['duration_sleep'] = resultSleep!["totalDuration"] ?? 0;
-      data['duration_deep_sleep'] = resultSleep["deepDuration"] ?? 0; 
-      data['duration_light_sleep'] = resultSleep["lightDuration"] ?? 0;
+      data['username'] = "zanurano";      
+      data['step'] = resultStep != null ? resultStep["steps"] : 0;
+      data['bpm'] = resultHeart != null ? resultHeart["hr"] : 0;
+      
+      data['duration_sleep'] = resultSleep != null ? resultSleep["totalDuration"] : 0;
+      data['duration_deep_sleep'] = resultSleep != null ? resultSleep["deepDuration"] : 0; 
+      data['duration_light_sleep'] = resultSleep != null ? resultSleep["lightDuration"] : 0;
+      
       data['seri_no'] = resultLog["resultDeviceInfo"]!['sn'];
       data['device_id'] = resultLog["resultDeviceInfo"]!['sn'];
       data['model'] = resultDeviceInfo!['model'];
@@ -60,9 +62,11 @@ class FitnessController {
 
       DashboardController dashboard = DashboardController();
       // sinkron data ke server
-      // debugPrint("auth: $auth");
-      // debugPrint("data: $data"); 
+      debugPrint("get auth: ${auth['serialNo']}");
+      debugPrint("get data: ${data['seri_no']}"); 
+      // debugPrint("ini data: $data");
       if (auth['serialNo'] == data['seri_no']) {
+        debugPrint("sinkron prosess");
         await dashboard.sinkronData(data, resultDeviceInfo, auth);
         return {
           "error": false,
@@ -76,13 +80,14 @@ class FitnessController {
       else {
         return {
           "error": true,
-          "error_message": "Perangkat pengguna tidak sama dengan perangkat terdaftar",
+          "error_message": "Perangkat pengguna tidak terbaca atau identitas perangkat tidak sama dengan perangkat terdaftar",
           "resultDeviceInfo": resultDeviceInfo,
           "resultSleep": resultSleep,
           "resultHeart": resultHeart,
           "resultStep": resultStep,
         };
       }
+      
     } else {
       return {
           "error": true,
@@ -133,7 +138,6 @@ class FitnessController {
   Future<Map<String, dynamic>> getDeviceInfo() async {
     Map<String, dynamic>? resultDeviceInfo = {};
     Map<String, dynamic> dataFile = await watch.readLog();
-    // debugPrint("dataFile ${dataFile}");
     if (dataFile['error'] == false) {
       contentFile = dataFile["file_content"];
 
@@ -164,7 +168,7 @@ class FitnessController {
         // debugPrint("dataDevice: $dataDevice");
         
         Map<String, dynamic> mapDevice = jsonDeviceInfo(dataDevice);
-        // debugPrint("mapDevice: $mapDevice");
+        // debugPrint("=====>> mapDevice: $mapDevice");
         resultDeviceInfo = mapDevice;
       }
 
@@ -206,8 +210,8 @@ class FitnessController {
     return mapDevice;
   }
 
-  Future<Map<String, dynamic>> getSleepInfo() async {
-    Map<String, dynamic>? resultSleep = {};
+  Future<Map<String, dynamic>?> getSleepInfo() async {
+    Map<String, dynamic>? resultSleep;
     findWord = "mHealthReportAllDaySleepReport";  
       // List<String> arr = contentFile.split("\n");      
       List<String> arr = ls.convert(contentFile);
@@ -222,10 +226,13 @@ class FitnessController {
         }
       }
       
-      dataSleep = sleepElement.last.split("|").last;
-      Map<String, dynamic> dailySleepReport = jsonDailySleepReport(dataSleep);
-      // debugPrint("dailySleepReport: $dailySleepReport");
-      resultSleep = dailySleepReport;
+      if (sleepElement.isNotEmpty) {
+        dataSleep = sleepElement.last.split("|").last;
+        Map<String, dynamic> dailySleepReport = jsonDailySleepReport(dataSleep);
+        
+        resultSleep = dailySleepReport;
+      }
+      
       return resultSleep;
   }
 
@@ -267,8 +274,8 @@ class FitnessController {
     return dailyStepReport;
   }
 
-  Future<Map<String, dynamic>> getStepInfo() async {
-    Map<String, dynamic>? resultStep = {};
+  Future<Map<String, dynamic>?> getStepInfo() async {
+    Map<String, dynamic>? resultStep;
     findWord = "DailyStepReport";
       List<String> arrStep = contentFile.split("\n");
       List<String> stepElement = [];
@@ -281,9 +288,13 @@ class FitnessController {
           }
         }
       }
-      dataStep = stepElement.last.split(" - ")[1];
-      Map<String, dynamic> dailyStepReport = jsonDailyStepReport(dataStep);
-      resultStep = dailyStepReport;
+      
+      if (stepElement.isNotEmpty) {
+        dataStep = stepElement.last.split(" - ")[1];
+        Map<String, dynamic> dailyStepReport = jsonDailyStepReport(dataStep);
+        resultStep = dailyStepReport;
+      }
+      
       return resultStep;
   }
 
@@ -317,8 +328,8 @@ class FitnessController {
     return dailySleepReport;
   }
 
-  Future<Map<String, dynamic>> getHeartInfo() async {
-    Map<String, dynamic>? resultHeart = {};
+  Future<Map<String, dynamic>?> getHeartInfo() async {
+    Map<String, dynamic>? resultHeart;
     findWord = "[HomeDataRepository] HR";      
     // List<String> arrHeart = contentFile.split("\n");
     List<String> arrHeart = ls.convert(contentFile);
@@ -335,13 +346,13 @@ class FitnessController {
         }
       }
     }
-      
-    // debugPrint("heartElement: ${heartElement.length}");
-    // debugPrint("heartElement last: ${heartElement.last}");
-    dataheart = heartElement.last.split("|").last.trim();
-    // debugPrint("dataheart: $dataheart");
-    Map<String, dynamic> dailyHeartReport = jsonDailyHeartReport(dataheart);
-    resultHeart = dailyHeartReport;
+    
+    if(heartElement.isNotEmpty) {
+      dataheart = heartElement.last.split("|").last.trim();
+      Map<String, dynamic> dailyHeartReport = jsonDailyHeartReport(dataheart);
+      resultHeart = dailyHeartReport;
+    }
+    
     return resultHeart;
   }
   
